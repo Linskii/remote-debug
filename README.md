@@ -76,7 +76,7 @@ pixi install
 
 ### Method A: Connecting from your Local Machine
 
-Use this method if you are running VS Code locally and want to connect to the remote cluster.
+Use this method if you are running your IDE locally and want to connect to the remote cluster.
 
 1.  **Create an SSH Tunnel**
     On your **local machine**, run the `tunnel` command using the `Node` and `Port` from the job output, along with your cluster's SSH login details.
@@ -88,7 +88,7 @@ Use this method if you are running VS Code locally and want to connect to the re
 
     This will generate an `ssh` command. Copy, paste, and run it in a new terminal to establish the tunnel. Keep this terminal open.
 
-2.  **Attach VS Code**
+2.  **Attach Debugger (example with VS Code)**
     - Open the "Run and Debug" panel in VS Code (Ctrl+Shift+D).
     - Select **"Python Debugger: Remote Attach (via SSH Tunnel)"** from the dropdown and click the play button.
     - You will be prompted for:
