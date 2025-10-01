@@ -110,15 +110,13 @@ Use this method if you are already connected to a remote machine (like a login n
 
 ## Command Reference
 
-| Command                                    | Description                                                                                             |
-| ------------------------------------------ | ------------------------------------------------------------------------------------------------------- |
-| `remote-debug <script> [args...]`          | Wraps a Python script to start a `debugpy` listener and waits for a client to attach.                   |
-| `remote-debug init`                        | Creates or updates `.vscode/launch.json` with the required debugger configurations.                     |
-| `remote-debug tunnel <# 🚀 remote-debug
+## Command Reference
 
-A CLI tool to simplify visual debugging of Python scripts on remote HPC clusters directly from your local VS Code instance.
-
-`remote-debug` helps you bridge the gap between your local editor and a script running on a remote compute node, making it easy to debug GPU-specific issues or complex cluster jobs with a full-featured debugger.
+| Command | Description |
+|---|---|
+| `remote-debug <script> [args...]` | Wraps a Python script to start a `debugpy` listener and waits for a client to attach. |
+| `remote-debug init` | Creates or updates `.vscode/launch.json` with the required debugger configurations. |
+| `remote-debug tunnel <node> <port> <login>` | Constructs the SSH command to establish a tunnel to the compute node. |
 
 ---
 
