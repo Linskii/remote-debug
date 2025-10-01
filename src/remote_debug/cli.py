@@ -42,7 +42,7 @@ def debug(script_path, script_args):
     debugpy.listen(("0.0.0.0", port))
 
     click.echo("Script is paused, waiting for debugger to attach...")
-    # This line blocks execution until you attach from VS Code.
+    # This line blocks execution until you attach from VS  Code.
     debugpy.wait_for_client()
     click.echo("Debugger attached! Resuming script.")
 
