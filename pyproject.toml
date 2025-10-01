@@ -1,7 +1,12 @@
 [project]
 name = "remote_debug"
 version = "0.1.0"
-dependencies = []
+description = "A tool to simplify remote debugging on HPC clusters."
+
+dependencies = [
+    "click",
+    "debugpy"
+]
 
 [build-system]
 requires = ["setuptools>=61.0"]
@@ -9,3 +14,11 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
+
+[project.scripts]
+debug = "remote_debug_helper.cli:debug"
+debug-init = "remote_debug_helper.cli:init"
+debug-tunnel = "remote_debug_helper.cli:tunnel"
+
+[tool.setuptools.packages.find]
+where = ["src"]
