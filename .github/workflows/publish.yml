@@ -32,4 +32,4 @@ jobs:
       - name: Upload package to Anaconda
         shell: bash -l {0}
         run: |
-          anaconda -t ${{ secrets.ANACONDA_TOKEN }} upload ./build_output/noarch/remote-debug-*.tar.bz2
+          anaconda -t ${{ secrets.ANACONDA_TOKEN }} upload ./build_output/noarch/remote-debug-*.conda
