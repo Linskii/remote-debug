@@ -5,7 +5,6 @@ import sys
 import runpy
 import debugpy
 import json
-import requests
 
 
 @click.group()
@@ -21,12 +20,7 @@ def cli():
 )
 @click.argument("script_path", type=click.Path(exists=True))
 @click.argument("script_args", nargs=-1, type=click.UNPROCESSED)
-@click.option(
-    "--webhook-url",
-    envvar="REMOTE_DEBUG_WEBHOOK_URL",
-    help="URL to send a POST request to with debugger info. Can also be set via an environment variable.",
-)
-def debug(script_path, script_args, webhook_url):
+def debug(script_path, script_args):
     """Wraps a python script to start a debugpy listener."""
     # 1. Find an open port.
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -43,30 +37,6 @@ def debug(script_path, script_args, webhook_url):
     click.echo(f"Port: {port}")
     click.echo(f"Remote Path: {remote_path}")
     click.echo("--------------------------")
-
-    # 3. Send webhook notification if URL is provided
-    if webhook_url:
-        click.echo("Sending notification to webhook...")
-        # Most services like Slack expect a 'text' field in the JSON payload.
-        # Using markdown-like formatting for better readability in the chat.
-        payload = {
-            "text": (
-                "Python debugger is ready for connection.\n"
-                f"• *Node*: `{hostname}`\n"
-                f"• *Port*: `{port}`\n"
-                f"• *Remote Path*: `{remote_path}`"
-            )
-        }
-        try:
-            # Send the data as a JSON payload with a timeout.
-            response = requests.post(webhook_url, json=payload, timeout=10)
-            # Raise an error if the request was not successful (e.g., 404, 500)
-            response.raise_for_status()
-            click.secho("Notification sent successfully.", fg="green")
-        except requests.exceptions.RequestException as e:
-            click.secho(
-                f"Warning: Failed to send webhook notification: {e}", fg="yellow"
-            )
 
     # Start listening for a connection.
     debugpy.listen(("0.0.0.0", port))

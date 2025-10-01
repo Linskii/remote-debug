@@ -4,7 +4,6 @@ from unittest.mock import patch, ANY
 import os
 from remote_debug.cli import cli
 import json
-import requests
 
 
 @patch("remote_debug.cli.runpy.run_path")
