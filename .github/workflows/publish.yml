@@ -8,10 +8,7 @@ on:
 jobs:
   publish:
     runs-on: ubuntu-latest
-    # Define a build matrix for different Python versions
-    strategy:
-      matrix:
-        python-version: ["3.9", "3.10", "3.11", "3.12"]
+    # No matrix is needed for a noarch build
 
     steps:
       - name: Checkout repository
@@ -21,8 +18,8 @@ jobs:
         uses: conda-incubator/setup-miniconda@v3
         with:
           auto-update-conda: true
-          # Use the Python version from the matrix
-          python-version: ${{ matrix.python-version }}
+          # We can use any recent python for the build environment
+          python-version: "3.12"
 
       - name: Install conda-build and anaconda-client
         shell: bash -l {0}
@@ -32,11 +29,11 @@ jobs:
       - name: Build Conda package
         shell: bash -l {0}
         run: |
-          # The --python flag tells conda-build which version to build for
-          conda build ./conda.recipe --python ${{ matrix.python-version }} --output-folder ./build_output
+          # No --python flag needed, conda-build will use the noarch setting from meta.yaml
+          conda build ./conda.recipe --output-folder ./build_output
 
       - name: Upload package to Anaconda
         shell: bash -l {0}
         run: |
-          # The package is no longer in 'noarch', but in a platform-specific folder
-          anaconda -t ${{ secrets.ANACONDA_TOKEN }} upload ./build_output/linux-64/remote-debug-*.conda
+          # Point to the correct 'noarch' directory
+          anaconda -t ${{ secrets.ANACONDE_TOKEN }} upload ./build_output/noarch/remote-debug-*.conda
