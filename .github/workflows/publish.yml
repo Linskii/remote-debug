@@ -1,0 +1,35 @@
+
+name: Publish to Anaconda
+
+on:
+  push:
+    tags:
+      - 'v*' # Trigger on tags like v0.1.0, v1.2.3 etc.
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Conda
+        uses: conda-incubator/setup-miniconda@v3
+        with:
+          auto-update-conda: true
+          python-version: "3.12"
+
+      - name: Install conda-build and anaconda-client
+        shell: bash -l {0}
+        run: |
+          conda install conda-build anaconda-client
+
+      - name: Build Conda package
+        shell: bash -l {0}
+        run: |
+          conda build ./conda.recipe --output-folder ./build_output
+
+      - name: Upload package to Anaconda
+        shell: bash -l {0}
+        run: |
+          anaconda -t ${{ secrets.ANACONDA_TOKEN }} upload ./build_output/noarch/remote-debug-*.tar.bz2

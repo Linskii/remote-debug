@@ -1,0 +1,38 @@
+{% set name = "remote-debug" %}
+{% set version = "0.1.0" %}
+
+package:
+  name: {{ name|lower }}
+  version: {{ version }}
+
+source:
+  path: .. # Use the parent directory as the source
+
+build:
+  number: 0
+  script: "{{ PYTHON }} -m pip install . -vv"
+  noarch: python
+  entry_points:
+    - remote-debug = remote_debug.cli:cli
+
+requirements:
+  host:
+    - python >=3.8
+    - pip
+    - setuptools
+  run:
+    - python >=3.8
+    - click
+    - debugpy
+
+test:
+  imports:
+    - remote_debug
+  commands:
+    - remote-debug --help
+
+about:
+  home: https://github.com/Linskii/remote-debug
+  summary: 'A helper tool for remote debugging on HPC clusters.'
+  license: MIT
+  license_file: LICENSE # You should add a LICENSE file to your repo
