@@ -110,8 +110,6 @@ Use this method if you are already connected to a remote machine (like a login n
 
 ## Command Reference
 
-## Command Reference
-
 | Command | Description |
 |---|---|
 | `remote-debug <script> [args...]` | Wraps a Python script to start a `debugpy` listener and waits for a client to attach. |
