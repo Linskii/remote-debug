@@ -47,7 +47,7 @@ pixi install
     > If `launch.json` exists but is malformed, it will be backed up to `launch.json.bak` and a new file will be created.
 
 2.  **Run your script on the cluster**
-    Prefix your usual Python command with `remote-debug`. This will start a debug server and wait for you to connect.
+    Prefix your usual Python command with `remote-debug debug`. This will start a debug server and wait for you to connect.
 
     ```bash
     # Instead of: python my_script.py --arg value
