@@ -52,7 +52,7 @@ pixi install
     ```bash
     # Instead of: python my_script.py --arg value
     # Run this:
-    remote-debug my_script.py --arg value
+    remote-debug debug my_script.py --arg value
     ```
 
 3.  **Check your job's output**
