@@ -26,7 +26,7 @@ def test_debug_command(mock_listen, mock_wait_for_client, mock_run_path, tmp_pat
     runner = CliRunner()
     script_args = ["--foo", "bar", "baz"]
 
-    # Keep track of the original sys.argv and sys.path
+    # Keep track of the original sys.argv and  sys.path
     original_argv = sys.argv
     original_path = sys.path[:]
 
