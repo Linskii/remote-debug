@@ -37,7 +37,7 @@ pixi install
 ## Quick Start
 
 1.  **Initialize your project**
-    This command creates the necessary VS Code launch configurations in `.vscode/launch.json`.
+    Run this command from your project root to create the necessary VS Code launch configurations in `.vscode/launch.json`.
 
     ```bash
     rdg init
