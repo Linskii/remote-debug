@@ -32,7 +32,9 @@ def test_debug_command(mock_listen, mock_wait_for_client, mock_run_path, tmp_pat
 
     try:
         result = runner.invoke(
-            cli, ["debug", str(script_path)] + script_args, catch_exceptions=False
+            cli,
+            ["debug", "python", str(script_path)] + script_args,
+            catch_exceptions=False,
         )
 
         assert result.exit_code == 0

@@ -18,7 +18,7 @@ dependencies = [
 ]
 
 [project.scripts]
-remote-debug = "remote_debug.cli:cli"
+rdg = "remote_debug.cli:cli"
 
 
 

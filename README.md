@@ -40,23 +40,23 @@ pixi install
     This command creates the necessary VS Code launch configurations in `.vscode/launch.json`.
 
     ```bash
-    remote-debug init
+    rdg init
     ```
 
     > [!WARNING]
     > If `launch.json` exists but is malformed, it will be backed up to `launch.json.bak` and a new file will be created.
 
 2.  **Run your script on the cluster**
-    Prefix your usual Python command with `remote-debug debug`. This will start a debug server and wait for you to connect.
+    Prefix your usual Python command with `rdg debug`. This will start a debug server and wait for you to connect.
 
     ```bash
     # Instead of: python my_script.py --arg value
     # Run this:
-    remote-debug debug my_script.py --arg value
+    rdg debug python my_script.py --arg value
     ```
 
 3.  **Check your job's output**
-    The job output will contain the connection details needed to attach the debugger.
+    The job output will contain the connection details and the SSH command needed to attach the debugger.
 
     ```text
     --- Python Debugger Info ---
@@ -64,7 +64,12 @@ pixi install
     Port: 51041
     Remote Path: /path/to/your/project
     --------------------------
-    Script is paused, waiting for debugger to attach..
+
+    To connect from a local VS Code instance, run this on your local machine:
+    ssh -N -L 5678:uc2n805.localdomain:51041 <user@login.hostname>
+    Then, attach the debugger to localhost:5678.
+
+    Script is paused, waiting for debugger to attach...
     ```
 
 4.  **Connect VS Code**
@@ -74,16 +79,23 @@ pixi install
 
 ## Debugging Workflow
 
+> [!NOTE]
+> For the debugger to work, your VS Code editor must have access to the exact source code that is running on the remote compute node.
+> - **If you are developing locally:** Make sure you have an identical copy of the project on your local machine (e.g., by using `git clone`).
+> - **If you are using VS Code Remote-SSH:** You are already viewing the project files on the remote machine, so no extra steps are needed.
+
 ### Method A: Connecting from your Local Machine
 
 Use this method if you are running your IDE locally and want to connect to the remote cluster.
 
 1.  **Create an SSH Tunnel**
+    You can either copy the `ssh` command directly from your job's output (just replace the `<user@login.hostname>` placeholder), or use the `rdg tunnel` helper command as shown below.
+
     On your **local machine**, run the `tunnel` command using the `Node` and `Port` from the job output, along with your cluster's SSH login details.
 
     ```bash
-    # remote-debug tunnel <NODE> <REMOTE_PORT> <SSH_LOGIN>
-    remote-debug tunnel uc2n805.localdomain 51041 username@cluster.hostname.com
+    # rdg tunnel <NODE> <REMOTE_PORT> <SSH_LOGIN>
+    rdg tunnel uc2n805.localdomain 51041 username@cluster.hostname.com
     ```
 
     This will generate an `ssh` command. Copy, paste, and run it in a new terminal to establish the tunnel. Keep this terminal open.
@@ -112,8 +124,8 @@ Use this method if you are already connected to a remote machine (like a login n
 
 | Command | Description |
 |---|---|
-| `remote-debug <script> [args...]` | Wraps a Python script to start a `debugpy` listener and waits for a client to attach. |
-| `remote-debug init` | Creates or updates `.vscode/launch.json` with the required debugger configurations. |
-| `remote-debug tunnel <node> <port> <login>` | Constructs the SSH command to establish a tunnel to the compute node. |
+| `rdg rebug python <script> [args...]` | Wraps a Python script to start a `debugpy` listener and waits for a client to attach. |
+| `rdg init` | Creates or updates `.vscode/launch.json` with the required debugger configurations. |
+| `rdg tunnel <node> <port> <login> [--local-port <port>]` | Constructs the SSH command to establish a tunnel to the compute node. |
 
 ---

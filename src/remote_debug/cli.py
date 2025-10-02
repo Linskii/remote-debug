@@ -16,12 +16,26 @@ def cli():
 @cli.command(
     context_settings=dict(
         ignore_unknown_options=True,
+        allow_interspersed_args=False,
     )
 )
-@click.argument("script_path", type=click.Path(exists=True))
-@click.argument("script_args", nargs=-1, type=click.UNPROCESSED)
-def debug(script_path, script_args):
+@click.argument("command", nargs=-1, type=click.UNPROCESSED)
+def debug(command):
     """Wraps a python script to start a debugpy listener."""
+    if not command or not command[0].endswith("python"):
+        click.echo(
+            "Usage: rdg debug python <script.py> [args...]",
+            err=True,
+        )
+        sys.exit(1)
+
+    script_path = command[1]
+    script_args = command[2:]
+
+    if not os.path.exists(script_path):
+        click.echo(f"Error: Script not found at '{script_path}'", err=True)
+        sys.exit(1)
+
     # 1. Find an open port.
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.bind(("", 0))
@@ -38,10 +52,19 @@ def debug(script_path, script_args):
     click.echo(f"Remote Path: {remote_path}")
     click.echo("--------------------------")
 
+    # Also print the tunnel command for convenience
+    default_local_port = 5678
+    ssh_command = _construct_ssh_command(hostname, port, default_local_port)
+    click.echo(
+        "\nTo connect from a local VS Code instance, run this on your local machine:"
+    )
+    click.secho(ssh_command, fg="green")
+    click.echo(f"Then, attach the debugger to localhost:{default_local_port}.\n")
+
     # Start listening for a connection.
     debugpy.listen(("0.0.0.0", port))
 
-    click.echo("Script is paused, waiting for debugger to attach..")
+    click.echo("Script is paused, waiting for debugger to attach...")
     # This line blocks execution until you attach from VS  Code.
     debugpy.wait_for_client()
     click.echo("Debugger attached! Resuming script.")
@@ -171,7 +194,9 @@ def init():
 def tunnel(compute_node, remote_port, ssh_login, local_port):
     """Constructs the SSH command to create a tunnel for remote debugging."""
 
-    ssh_command = f"ssh -N -L {local_port}:{compute_node}:{remote_port} {ssh_login}"
+    ssh_command = _construct_ssh_command(
+        compute_node, remote_port, local_port, ssh_login
+    )
 
     click.echo(
         "\nRun the following command in a new terminal on your local machine to create the SSH tunnel:"
@@ -183,6 +208,12 @@ def tunnel(compute_node, remote_port, ssh_login, local_port):
     click.echo(
         f"Once the tunnel is running, you can attach your VS Code debugger to localhost:{local_port}."
     )
+
+
+def _construct_ssh_command(compute_node, remote_port, local_port, ssh_login=None):
+    """Builds the SSH tunnel command string."""
+    login_placeholder = ssh_login if ssh_login else "<user@login.hostname>"
+    return f"ssh -N -L {local_port}:{compute_node}:{remote_port} {login_placeholder}"
 
 
 if __name__ == "__main__":
