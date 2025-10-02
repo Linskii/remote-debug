@@ -32,10 +32,6 @@ def debug(command):
     script_path = command[1]
     script_args = command[2:]
 
-    if not os.path.exists(script_path):
-        click.echo(f"Error: Script not found at '{script_path}'", err=True)
-        sys.exit(1)
-
     # 1. Find an open port.
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.bind(("", 0))
