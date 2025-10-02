@@ -36,6 +36,9 @@ pixi install
 
 ## Quick Start
 
+> [!WARNING]
+> If `launch.json` exists but is malformed, it will be backed up to `launch.json.bak` and a new file will be created.
+
 1.  **Initialize your project**
     This command creates the necessary VS Code launch configurations in `.vscode/launch.json`.
 
