@@ -32,7 +32,7 @@ def debug(command):
     script_path = command[1]
     script_args = command[2:]
 
-    # 1. Find an open port.
+    # 1. Find an open  port.
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.bind(("", 0))
         port = s.getsockname()[1]
