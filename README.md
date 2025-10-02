@@ -36,9 +36,6 @@ pixi install
 
 ## Quick Start
 
-> [!WARNING]
-> If `launch.json` exists but is malformed, it will be backed up to `launch.json.bak` and a new file will be created.
-
 1.  **Initialize your project**
     This command creates the necessary VS Code launch configurations in `.vscode/launch.json`.
 
@@ -46,8 +43,8 @@ pixi install
     rdg init
     ```
 
-    > [!WARNING]
-    > If `launch.json` exists but is malformed, it will be backed up to `launch.json.bak` and a new file will be created.
+> [!WARNING]
+> If `launch.json` exists but is malformed, it will be backed up to `launch.json.bak` and a new file will be created.
 
 2.  **Run your script on the cluster**
     Prefix your usual Python command with `rdg debug`. This will start a debug server and wait for you to connect.
