@@ -1,12 +1,14 @@
 import rich_click as click
 from rich.panel import Panel
 from rich.text import Text
+from rich.console import Console
 import socket
 import os
 import sys
 import runpy
 import debugpy
 import json
+import io
 
 
 @click.group()
@@ -60,6 +62,7 @@ def debug(command):
     remote_path = os.getcwd()
 
     # Print connection info for the user
+    console = Console(file=io.StringIO())
     info_text = Text(justify="left")
     info_text.append("Node:        ", style="bold")
     info_text.append(hostname, style="cyan")
@@ -68,14 +71,15 @@ def debug(command):
     info_text.append("\nRemote Path: ", style="bold")
     info_text.append(remote_path, style="cyan")
 
-    click.echo(
-        Panel(
-            info_text,
-            title="[bold yellow]Python Debugger Info[/bold yellow]",
-            border_style="blue",
-            expand=False,
-        )
+    panel = Panel(
+        info_text,
+        title="[bold yellow]Python Debugger Info[/bold yellow]",
+        border_style="blue",
+        expand=False,
     )
+    console.print(panel)
+    output = console.file.getvalue()
+    click.echo(output)
 
     # Also print the tunnel command for convenience
     default_local_port = 5678

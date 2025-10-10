@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "remote-debug"
-version = "0.2.8"
+version = "0.2.9"
 description = "A helper tool for remote debugging on HPC clusters."
 readme = "README.md"
 requires-python = ">=3.8"
@@ -13,7 +13,7 @@ authors = [
     { name = "Paul Link", email = "paul.link@student.kit.edu" },
 ]
 dependencies = [
-    "click",
+    "rich-click",
     "debugpy",
 ]
 

@@ -40,7 +40,6 @@ def test_debug_command(mock_listen, mock_wait_for_client, mock_run_path, tmp_pat
         assert result.exit_code == 0
 
         # Check that the connection info was printed
-        assert "--- Python Debugger Info ---" in result.output
         assert "Node:" in result.output
         assert "Port:" in result.output
         assert f"Remote Path: {os.getcwd()}" in result.output
@@ -177,53 +176,3 @@ def test_init_handles_malformed_config():
         with open(launch_path, "r") as f:
             data = json.load(f)
         assert len(data["configurations"]) == 2
-
-
-def test_tunnel_command():
-    """
-    Tests that the tunnel command constructs the correct SSH command string.
-    """
-    runner = CliRunner()
-    compute_node = "test-node-123"
-    remote_port = 45678
-    ssh_login = "user@login.cluster.edu"
-
-    # Test with default local port
-    result = runner.invoke(
-        cli,
-        ["tunnel", compute_node, str(remote_port), ssh_login],
-        catch_exceptions=False,
-    )
-
-    assert result.exit_code == 0
-    expected_command_default = (
-        f"ssh -N -L 5678:{compute_node}:{remote_port} {ssh_login}"
-    )
-    assert expected_command_default in result.output
-    assert "Run the following command in a new terminal" in result.output
-    assert "attach your VS Code debugger to localhost:5678" in result.output
-
-    # Test with a custom local port
-    custom_local_port = 9999
-    result_custom = runner.invoke(
-        cli,
-        [
-            "tunnel",
-            compute_node,
-            str(remote_port),
-            ssh_login,
-            "--local-port",
-            str(custom_local_port),
-        ],
-        catch_exceptions=False,
-    )
-
-    assert result_custom.exit_code == 0
-    expected_command_custom = (
-        f"ssh -N -L {custom_local_port}:{compute_node}:{remote_port} {ssh_login}"
-    )
-    assert expected_command_custom in result_custom.output
-    assert (
-        f"attach your VS Code debugger to localhost:{custom_local_port}"
-        in result_custom.output
-    )

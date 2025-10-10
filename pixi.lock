@@ -1602,10 +1602,10 @@ packages:
   timestamp: 1737836872415
 - pypi: .
   name: remote-debug
-  version: 0.2.7
-  sha256: d9abfdda23b30c8bcf3b26a053924b5843d2c91b54b421504d7319ca5615aee7
+  version: 0.2.8
+  sha256: ee0917f994b3467d03fbe9cc5f3ce81e4377e6357da9673cafefc101ccc56860
   requires_dist:
-  - click
+  - rich-click
   - debugpy
   requires_python: '>=3.8'
   editable: true
