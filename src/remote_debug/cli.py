@@ -1,4 +1,6 @@
-import click
+import rich_click as click
+from rich.panel import Panel
+from rich.text import Text
 import socket
 import os
 import sys
@@ -9,7 +11,11 @@ import json
 
 @click.group()
 def cli():
-    """A helper tool for remote debugging on HPC clusters."""
+    """A helper tool for remote debugging Python scripts on HPC clusters.
+
+    This tool simplifies the process of starting a Python debugger on a compute node
+    and connecting to it from a local VS Code instance.
+    """
     pass
 
 
@@ -21,7 +27,19 @@ def cli():
 )
 @click.argument("command", nargs=-1, type=click.UNPROCESSED)
 def debug(command):
-    """Wraps a python script to start a debugpy listener."""
+    """Wraps a Python script to start a `debugpy` listener.
+
+    This allows you to attach a remote debugger from your local machine.
+    It is designed as a drop-in replacement for the `python` command.
+
+    For example, instead of running:
+
+        python my_script.py --arg1 value1
+
+    You would run:
+
+        rdg debug python my_script.py --arg1 value1
+    """
     if not command or not command[0].endswith("python"):
         click.echo(
             "Usage: rdg debug python <script.py> [args...]",
@@ -42,11 +60,22 @@ def debug(command):
     remote_path = os.getcwd()
 
     # Print connection info for the user
-    click.echo("--- Python Debugger Info ---")
-    click.echo(f"Node: {hostname}")
-    click.echo(f"Port: {port}")
-    click.echo(f"Remote Path: {remote_path}")
-    click.echo("--------------------------")
+    info_text = Text(justify="left")
+    info_text.append("Node:        ", style="bold")
+    info_text.append(hostname, style="cyan")
+    info_text.append("\nPort:        ", style="bold")
+    info_text.append(str(port), style="cyan")
+    info_text.append("\nRemote Path: ", style="bold")
+    info_text.append(remote_path, style="cyan")
+
+    click.echo(
+        Panel(
+            info_text,
+            title="[bold yellow]Python Debugger Info[/bold yellow]",
+            border_style="blue",
+            expand=False,
+        )
+    )
 
     # Also print the tunnel command for convenience
     default_local_port = 5678
@@ -76,7 +105,16 @@ def debug(command):
 
 @cli.command()
 def init():
-    """Initializes the project with a VS Code launch configuration."""
+    """Adds launch configurations to your VS Code settings (`.vscode/launch.json`).
+
+    This command will add two configurations:
+
+    1.  **Python Debugger: Remote Attach (via SSH Tunnel)**:
+        For connecting from your local machine to a compute node via an SSH tunnel.
+
+    2.  **Python Debugger: Attach to Compute Node**:
+        For connecting directly when you are already on the cluster's login node using the VS Code SSH extension.
+    """
     click.echo("Initializing debug configuration...")
 
     vscode_dir = ".vscode"
@@ -180,35 +218,31 @@ def init():
     click.echo(f"Successfully updated '{launch_json_path}'.")
 
 
-@cli.command()
-@click.argument("compute_node")
-@click.argument("remote_port", type=int)
-@click.argument("ssh_login")
-@click.option(
-    "--local-port", default=5678, help="The local port to forward.", show_default=True
-)
-def tunnel(compute_node, remote_port, ssh_login, local_port):
-    """Constructs the SSH command to create a tunnel for remote debugging."""
-
-    ssh_command = _construct_ssh_command(
-        compute_node, remote_port, local_port, ssh_login
-    )
-
-    click.echo(
-        "\nRun the following command in a new terminal on your local machine to create the SSH tunnel:"
-    )
-    click.echo("-" * 70)
-    click.secho(ssh_command, fg="green")
-    click.echo("-" * 70)
-    click.echo("\nKeep that terminal open to maintain the connection.")
-    click.echo(
-        f"Once the tunnel is running, you can attach your VS Code debugger to localhost:{local_port}."
-    )
-
-
-def _construct_ssh_command(compute_node, remote_port, local_port, ssh_login=None):
+def _construct_ssh_command(compute_node, remote_port, local_port):
     """Builds the SSH tunnel command string."""
-    login_placeholder = ssh_login if ssh_login else "<user@login.hostname>"
+
+    # Try to get user and login host from Slurm environment variables
+    user = os.environ.get("SLURM_JOB_USER") or os.environ.get("USER")
+    submit_host_short = os.environ.get("SLURM_SUBMIT_HOST")
+
+    if user and submit_host_short:
+        try:
+            # Attempt to resolve the fully qualified domain name
+            submit_host_fqdn = socket.getfqdn(submit_host_short)
+            # Fix for cases where getfqdn returns a doubled hostname (e.g., host.host.domain.com)
+            if submit_host_fqdn.startswith(submit_host_short + "." + submit_host_short):
+                submit_host_fqdn = submit_host_fqdn[len(submit_host_short) + 1 :]
+            login_placeholder = f"{user}@{submit_host_fqdn}"
+        except socket.gaierror:
+            # Fallback to short name if resolution fails
+            click.echo(
+                "Warning: Could not automatically resolve FQDN for submit host. The hostname trailing the @ might be incomplete.",
+                err=True,
+            )
+            login_placeholder = f"{user}@{submit_host_short}"
+    else:
+        login_placeholder = "<user@login.hostname>"
+
     return f"ssh -N -L {local_port}:{compute_node}:{remote_port} {login_placeholder}"
 
 

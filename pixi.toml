@@ -18,3 +18,4 @@ conda-build = ">=25.9.0,<26"
 
 [pypi-dependencies]
 remote_debug = { path = ".", editable = true }
+rich-click = ">=1.9.3, <2"

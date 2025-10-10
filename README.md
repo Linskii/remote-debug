@@ -37,7 +37,7 @@ pixi install
 ## Quick Start
 
 1.  **Initialize your project**
-    Run this command from your project root to create the necessary VS Code launch configurations in `.vscode/launch.json`.
+    Run this command from your project root to add the necessary VS Code launch configurations in `.vscode/launch.json`.
 
     ```bash
     rdg init
@@ -89,16 +89,7 @@ pixi install
 Use this method if you are running your IDE locally and want to connect to the remote cluster.
 
 1.  **Create an SSH Tunnel**
-    You can either copy the `ssh` command directly from your job's output (just replace the `<user@login.hostname>` placeholder), or use the `rdg tunnel` helper command as shown below.
-
-    On your **local machine**, run the `tunnel` command using the `Node` and `Port` from the job output, along with your cluster's SSH login details.
-
-    ```bash
-    # rdg tunnel <NODE> <REMOTE_PORT> <SSH_LOGIN>
-    rdg tunnel uc2n805.localdomain 51041 username@cluster.hostname.com
-    ```
-
-    This will generate an `ssh` command. Copy, paste, and run it in a new terminal to establish the tunnel. Keep this terminal open.
+    Copy and paste the `ssh` command directly from your job's output. If `remote-debug` was able to detect your username and the hostname of the cluster automatically you are good to go, otherwise just replace the `<user@login.hostname>` placeholder. Keep this terminal open.
 
 2.  **Attach Debugger (example with VS Code)**
     - Open the "Run and Debug" panel in VS Code (Ctrl+Shift+D).
