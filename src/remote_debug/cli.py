@@ -152,8 +152,9 @@ def _run_lite_mode(script_path, script_args):
         from rich.console import Console
         import io
 
-        click.echo(
-            f"\n[DEBUGGER] Signal {signum} received! Waking up debugger...", flush=True
+        print(
+            f"\n[DEBUGGER] Signal {signum} received! Waking up debugger...",
+            flush=True,
         )
 
         # 1. Find an open port
@@ -183,14 +184,12 @@ def _run_lite_mode(script_path, script_args):
         )
         console.print(panel)
         output = console.file.getvalue()
-        click.echo(output, flush=True)
+        print(output, flush=True)
 
         # Start listening
         debugpy.listen(("0.0.0.0", port))
-        click.echo(f"[DEBUGGER] Listening on 0.0.0.0:{port}", flush=True)
-        click.echo(
-            f"[DEBUGGER] Pausing execution. Attach your VS Code now!", flush=True
-        )
+        print(f"[DEBUGGER] Listening on 0.0.0.0:{port}", flush=True)
+        print(f"[DEBUGGER] Pausing execution. Attach your VS Code now!", flush=True)
 
         # Wait for client and break
         debugpy.wait_for_client()
