@@ -383,10 +383,10 @@ def _select_job_interactive():
         click.echo("Error: Could not determine username.", err=True)
         return None
 
-    # Run squeue to get user's jobs
+    # Run squeue to get user's jobs across all partitions
     try:
         result = subprocess.run(
-            ["squeue", "-u", user, "-h", "-o", "%i|%j|%T|%M|%N"],
+            ["squeue", "-u", user, "-h", "-o", "%i|%j|%T|%M|%N", "-a"],
             capture_output=True,
             text=True,
             check=True,
