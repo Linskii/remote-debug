@@ -15,6 +15,7 @@ authors = [
 dependencies = [
     "rich-click",
     "debugpy",
+    "questionary",
 ]
 
 [project.scripts]

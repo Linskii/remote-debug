@@ -9,6 +9,8 @@ import runpy
 import debugpy
 import json
 import io
+import subprocess
+import questionary
 
 
 @click.group()
@@ -27,8 +29,14 @@ def cli():
         allow_interspersed_args=False,
     )
 )
+@click.option(
+    "--lite",
+    "-l",
+    is_flag=True,
+    help="Enable lite mode: arm the debugger but don't start it until triggered with 'rdg attach'.",
+)
 @click.argument("command", nargs=-1, type=click.UNPROCESSED)
-def debug(command):
+def debug(lite, command):
     """Wraps a Python script to start a `debugpy` listener.
 
     This allows you to attach a remote debugger from your local machine.
@@ -41,10 +49,14 @@ def debug(command):
     You would run:
 
         rdg debug python my_script.py --arg1 value1
+
+    Use --lite mode for long-running jobs where you want the debugger on standby:
+
+        rdg debug --lite python my_script.py --arg1 value1
     """
     if not command or not command[0].endswith("python"):
         click.echo(
-            "Usage: rdg debug python <script.py> [args...]",
+            "Usage: rdg debug [--lite] python <script.py> [args...]",
             err=True,
         )
         sys.exit(1)
@@ -52,6 +64,16 @@ def debug(command):
     script_path = command[1]
     script_args = command[2:]
 
+    if lite:
+        # Lite mode: inject signal handler and run script normally
+        _run_lite_mode(script_path, script_args)
+    else:
+        # Normal mode: start debugger immediately
+        _run_normal_mode(script_path, script_args)
+
+
+def _run_normal_mode(script_path, script_args):
+    """Run the script with debugger started immediately (original behavior)."""
     # 1. Find an open port.
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.bind(("", 0))
@@ -94,7 +116,7 @@ def debug(command):
     debugpy.listen(("0.0.0.0", port))
 
     click.echo("Script is paused, waiting for debugger to attach...")
-    # This line blocks execution until you attach from VS  Code.
+    # This line blocks execution until you attach from VS Code.
     debugpy.wait_for_client()
     click.echo("Debugger attached! Resuming script.")
 
@@ -102,6 +124,83 @@ def debug(command):
     # Set sys.argv to what the script would expect
     sys.argv = [script_path] + list(script_args)
     # Add the script's directory to the path to allow for relative imports
+    sys.path.insert(0, os.path.dirname(script_path))
+
+    runpy.run_path(script_path, run_name="__main__")
+
+
+def _run_lite_mode(script_path, script_args):
+    """Run the script with signal-based debugger activation."""
+    import signal
+
+    # Print initial message
+    job_id = os.environ.get("SLURM_JOB_ID", "UNKNOWN")
+    pid = os.getpid()
+    click.secho(f"\n[Lite Debugger] Armed and ready!", fg="green", bold=True)
+    click.echo(f"  Job ID:  {job_id}")
+    click.echo(f"  PID:     {pid}")
+    click.echo(f"\nTo activate the debugger, run:")
+    click.secho(f"  rdg attach {job_id}", fg="cyan", bold=True)
+    click.echo()
+
+    def _activate_debugger(signum, frame):
+        """Signal handler that activates the debugger."""
+        import socket
+        import debugpy
+        from rich.panel import Panel
+        from rich.text import Text
+        from rich.console import Console
+        import io
+
+        click.echo(
+            f"\n[DEBUGGER] Signal {signum} received! Waking up debugger...", flush=True
+        )
+
+        # 1. Find an open port
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.bind(("", 0))
+            port = s.getsockname()[1]
+
+        # 2. Get the current hostname
+        hostname = socket.gethostname()
+        remote_path = os.getcwd()
+
+        # Print connection info for the user
+        console = Console(file=io.StringIO())
+        info_text = Text(justify="left")
+        info_text.append("Node:        ", style="bold")
+        info_text.append(hostname, style="cyan")
+        info_text.append("\nPort:        ", style="bold")
+        info_text.append(str(port), style="cyan")
+        info_text.append("\nRemote Path: ", style="bold")
+        info_text.append(remote_path, style="cyan")
+
+        panel = Panel(
+            info_text,
+            title="[bold yellow]Python Debugger Info[/bold yellow]",
+            border_style="blue",
+            expand=False,
+        )
+        console.print(panel)
+        output = console.file.getvalue()
+        click.echo(output, flush=True)
+
+        # Start listening
+        debugpy.listen(("0.0.0.0", port))
+        click.echo(f"[DEBUGGER] Listening on 0.0.0.0:{port}", flush=True)
+        click.echo(
+            f"[DEBUGGER] Pausing execution. Attach your VS Code now!", flush=True
+        )
+
+        # Wait for client and break
+        debugpy.wait_for_client()
+        debugpy.breakpoint()
+
+    # Register the signal handler
+    signal.signal(signal.SIGUSR1, _activate_debugger)
+
+    # Execute the target script
+    sys.argv = [script_path] + list(script_args)
     sys.path.insert(0, os.path.dirname(script_path))
 
     runpy.run_path(script_path, run_name="__main__")
@@ -222,10 +321,136 @@ def init():
     click.echo(f"Successfully updated '{launch_json_path}'.")
 
 
-def _construct_ssh_command(compute_node, remote_port, local_port):
-    """Builds the SSH tunnel command string."""
+@cli.command()
+@click.argument("job_id", required=False)
+def attach(job_id):
+    """Attach to a running lite-mode debugger job.
 
-    # Try to get user and login host from Slurm environment variables
+    Send a SIGUSR1 signal to activate the debugger in a job started with 'rdg debug --lite'.
+
+    If JOB_ID is not provided, you'll be prompted to select from your running jobs.
+
+    Example:
+        rdg attach 12345
+    """
+    # If no job_id provided, show interactive selection
+    if not job_id:
+        job_id = _select_job_interactive()
+        if not job_id:
+            click.echo("No job selected. Exiting.", err=True)
+            sys.exit(1)
+
+    # Send the SIGUSR1 signal
+    click.echo(f"Sending activation signal to job {job_id}...")
+    try:
+        subprocess.run(
+            ["scancel", "--signal=USR1", str(job_id)],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        click.secho(f"✓ Signal sent successfully to job {job_id}!", fg="green")
+    except subprocess.CalledProcessError as e:
+        click.secho(f"✗ Failed to send signal to job {job_id}", fg="red", err=True)
+        if e.stderr:
+            click.echo(f"Error: {e.stderr.strip()}", err=True)
+        sys.exit(1)
+    except FileNotFoundError:
+        click.secho(
+            "✗ 'scancel' command not found. Are you on a Slurm cluster?",
+            fg="red",
+            err=True,
+        )
+        sys.exit(1)
+
+    # Print instructions
+    click.echo(f"\nThe debugger should now be activating in job {job_id}.")
+    click.echo(f"Check your job output file (typically slurm-{job_id}.out) for:")
+    click.echo("  • Debugger connection details (hostname, port)")
+    click.echo("  • SSH tunnel command")
+    click.echo("\nThen create the tunnel and attach VS Code as usual.")
+
+
+def _select_job_interactive():
+    """Show an interactive job selection menu using squeue.
+
+    Returns:
+        str: Selected job ID, or None if cancelled
+    """
+    user, _ = _get_user_and_host()
+
+    if not user:
+        click.echo("Error: Could not determine username.", err=True)
+        return None
+
+    # Run squeue to get user's jobs
+    try:
+        result = subprocess.run(
+            ["squeue", "-u", user, "-h", "-o", "%i|%j|%T|%M|%N"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+    except subprocess.CalledProcessError as e:
+        click.secho("✗ Failed to retrieve job list", fg="red", err=True)
+        if e.stderr:
+            click.echo(f"Error: {e.stderr.strip()}", err=True)
+        return None
+    except FileNotFoundError:
+        click.secho(
+            "✗ 'squeue' command not found. Are you on a Slurm cluster?",
+            fg="red",
+            err=True,
+        )
+        return None
+
+    # Parse squeue output
+    jobs = []
+    for line in result.stdout.strip().split("\n"):
+        if not line:
+            continue
+        parts = line.split("|")
+        if len(parts) >= 5:
+            job_id, job_name, state, time, node = parts
+            jobs.append(
+                {
+                    "id": job_id,
+                    "name": job_name,
+                    "state": state,
+                    "time": time,
+                    "node": node,
+                }
+            )
+
+    if not jobs:
+        click.echo(f"No running jobs found for user '{user}'.", err=True)
+        return None
+
+    # Create questionary choices
+    choices = [
+        {
+            "name": f"{job['id']:>8} | {job['name']:<30} | {job['state']:<10} | {job['time']:<10} | {job['node']}",
+            "value": job["id"],
+        }
+        for job in jobs
+    ]
+
+    # Show interactive selection
+    click.echo(f"\nFound {len(jobs)} job(s) for user '{user}':\n")
+    selected = questionary.select(
+        "Select a job to attach to:",
+        choices=choices,
+    ).ask()
+
+    return selected
+
+
+def _get_user_and_host():
+    """Get the current user and login host from Slurm environment variables.
+
+    Returns:
+        tuple: (user, login_host) where login_host is the FQDN if possible, or None if not available
+    """
     user = os.environ.get("SLURM_JOB_USER") or os.environ.get("USER")
     submit_host_short = os.environ.get("SLURM_SUBMIT_HOST")
 
@@ -236,14 +461,24 @@ def _construct_ssh_command(compute_node, remote_port, local_port):
             # Fix for cases where getfqdn returns a doubled hostname (e.g., host.host.domain.com)
             if submit_host_fqdn.startswith(submit_host_short + "." + submit_host_short):
                 submit_host_fqdn = submit_host_fqdn[len(submit_host_short) + 1 :]
-            login_placeholder = f"{user}@{submit_host_fqdn}"
+            return user, submit_host_fqdn
         except socket.gaierror:
             # Fallback to short name if resolution fails
             click.echo(
                 "Warning: Could not automatically resolve FQDN for submit host. The hostname trailing the @ might be incomplete.",
                 err=True,
             )
-            login_placeholder = f"{user}@{submit_host_short}"
+            return user, submit_host_short
+
+    return user, None
+
+
+def _construct_ssh_command(compute_node, remote_port, local_port):
+    """Builds the SSH tunnel command string."""
+    user, login_host = _get_user_and_host()
+
+    if user and login_host:
+        login_placeholder = f"{user}@{login_host}"
     else:
         login_placeholder = "<user@login.hostname>"
 
