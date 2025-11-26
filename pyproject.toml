@@ -1,10 +1,10 @@
 [build-system]
-requires = ["setuptools>=61.0"]
+requires = ["setuptools>=61.0", "setuptools-scm>=6.2"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "remote-debug"
-version = "0.3.3"
+dynamic = ["version"]  # Tells modern pip/build tools the version is dynamic
 description = "A helper tool for remote debugging on HPC clusters."
 readme = "README.md"
 requires-python = ">=3.8"
@@ -17,6 +17,8 @@ dependencies = [
     "debugpy",
     "questionary",
 ]
+
+[tool.setuptools_scm]
 
 [project.scripts]
 rdg = "remote_debug.cli:cli"

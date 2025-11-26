@@ -375,7 +375,7 @@ def attach(job_id, pid):
     click.echo(f"Sending activation signal to job {job_id} (PID {pid})...")
     try:
         subprocess.run(
-            ["srun", f"--jobid={job_id}", "--pty", "bash", "-c", f"kill -USR1 {pid}"],
+            ["srun", f"--jobid={job_id}", "bash", "-c", f"kill -USR1 {pid}"],
             capture_output=True,
             text=True,
             check=True,
