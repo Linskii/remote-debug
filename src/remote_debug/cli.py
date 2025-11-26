@@ -189,6 +189,20 @@ def _run_lite_mode(script_path, script_args):
         # Start listening
         debugpy.listen(("0.0.0.0", port))
         print(f"[DEBUGGER] Listening on 0.0.0.0:{port}", flush=True)
+
+        # Print SSH tunnel command
+        default_local_port = 5678
+        ssh_command = _construct_ssh_command(hostname, port, default_local_port)
+        print(
+            "\nTo connect from a local VS Code instance, run this on your local machine:",
+            flush=True,
+        )
+        print(f"\033[92m{ssh_command}\033[0m", flush=True)  # Green color
+        print(
+            f"Then, attach the debugger to localhost:{default_local_port}.\n",
+            flush=True,
+        )
+
         print(f"[DEBUGGER] Pausing execution. Attach your VS Code now!", flush=True)
 
         # Wait for client and break
@@ -322,15 +336,19 @@ def init():
 
 @cli.command()
 @click.argument("job_id", required=False)
-def attach(job_id):
+@click.argument("pid", required=False)
+def attach(job_id, pid):
     """Attach to a running lite-mode debugger job.
 
     Send a SIGUSR1 signal to activate the debugger in a job started with 'rdg debug --lite'.
 
     If JOB_ID is not provided, you'll be prompted to select from your running jobs.
+    If PID is not provided, you'll be prompted to enter it.
 
-    Example:
-        rdg attach 12345
+    Examples:
+        rdg attach 12345 98765
+        rdg attach 12345  (will prompt for PID)
+        rdg attach        (will prompt for both)
     """
     # If no job_id provided, show interactive selection
     if not job_id:
@@ -339,16 +357,34 @@ def attach(job_id):
             click.echo("No job selected. Exiting.", err=True)
             sys.exit(1)
 
-    # Send the SIGUSR1 signal
-    click.echo(f"Sending activation signal to job {job_id}...")
+    # If no PID provided, prompt for it
+    if not pid:
+        click.echo(
+            f"\nCheck the job output for the PID (look for 'PID:' in the output)."
+        )
+        pid = questionary.text(
+            "Enter the Python process PID:",
+            validate=lambda text: text.isdigit() or "Please enter a valid PID number",
+        ).ask()
+
+        if not pid:
+            click.echo("No PID provided. Exiting.", err=True)
+            sys.exit(1)
+
+    # Send the SIGUSR1 signal using srun
+    click.echo(f"Sending activation signal to job {job_id} (PID {pid})...")
     try:
         subprocess.run(
-            ["scancel", "--signal=USR1", str(job_id)],
+            ["srun", f"--jobid={job_id}", "--pty", "bash", "-c", f"kill -USR1 {pid}"],
             capture_output=True,
             text=True,
             check=True,
+            timeout=10,
         )
         click.secho(f"✓ Signal sent successfully to job {job_id}!", fg="green")
+    except subprocess.TimeoutExpired:
+        click.secho(f"✗ Timeout sending signal to job {job_id}", fg="red", err=True)
+        sys.exit(1)
     except subprocess.CalledProcessError as e:
         click.secho(f"✗ Failed to send signal to job {job_id}", fg="red", err=True)
         if e.stderr:
@@ -356,7 +392,7 @@ def attach(job_id):
         sys.exit(1)
     except FileNotFoundError:
         click.secho(
-            "✗ 'scancel' command not found. Are you on a Slurm cluster?",
+            "✗ 'srun' command not found. Are you on a Slurm cluster?",
             fg="red",
             err=True,
         )
