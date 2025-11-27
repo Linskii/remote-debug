@@ -36,8 +36,14 @@ def cli():
     is_flag=True,
     help="Enable lite mode: arm the debugger but don't start it until triggered with 'rdg attach'.",
 )
+@click.option(
+    "--post-mortem",
+    "-pm",
+    is_flag=True,
+    help="Automatically start debugger on unhandled exceptions.",
+)
 @click.argument("command", nargs=-1, type=click.UNPROCESSED)
-def debug(lite, command):
+def debug(lite, post_mortem, command):
     """Wraps a Python script to start a `debugpy` listener.
 
     This allows you to attach a remote debugger from your local machine.
@@ -54,10 +60,14 @@ def debug(lite, command):
     Use --lite mode for long-running jobs where you want the debugger on standby:
 
         rdg debug --lite python my_script.py --arg1 value1
+
+    Use --post-mortem to debug crashes:
+
+        rdg debug --post-mortem python my_script.py --arg1 value1
     """
     if not command or not command[0].endswith("python"):
         click.echo(
-            "Usage: rdg debug [--lite] python <script.py> [args...]",
+            "Usage: rdg debug [--lite] [--post-mortem] python <script.py> [args...]",
             err=True,
         )
         sys.exit(1)
@@ -67,27 +77,37 @@ def debug(lite, command):
 
     if lite:
         # Lite mode: inject signal handler and run script normally
-        _run_lite_mode(script_path, script_args)
+        _run_lite_mode(script_path, script_args, post_mortem)
     else:
         # Normal mode: start debugger immediately
-        _run_normal_mode(script_path, script_args)
+        _run_normal_mode(script_path, script_args, post_mortem)
 
 
-def _run_normal_mode(script_path, script_args):
+def _run_normal_mode(script_path, script_args, post_mortem=False):
     """Run the script with debugger started immediately (original behavior)."""
-    # Start the debugger and wait for connection
-    _start_debugger_api(wait=True)
-
-    # Execute the target script
     # Set sys.argv to what the script would expect
     sys.argv = [script_path] + list(script_args)
     # Add the script's directory to the path to allow for relative imports
     sys.path.insert(0, os.path.dirname(script_path))
 
-    runpy.run_path(script_path, run_name="__main__")
+    if post_mortem:
+        # Post-mortem: only start debugger on crash
+        try:
+            runpy.run_path(script_path, run_name="__main__")
+        except Exception:
+            click.echo("\n[POST-MORTEM] Unhandled exception occurred! Starting debugger...", err=True)
+            import traceback
+            traceback.print_exc()
+            # Start debugger and trigger breakpoint at crash point
+            _start_debugger_api(wait=False)
+            debugpy.breakpoint()
+    else:
+        # Normal mode: start debugger before running script
+        _start_debugger_api(wait=True)
+        runpy.run_path(script_path, run_name="__main__")
 
 
-def _run_lite_mode(script_path, script_args):
+def _run_lite_mode(script_path, script_args, post_mortem=False):
     """Run the script with signal-based debugger activation."""
     import signal
 
@@ -97,6 +117,8 @@ def _run_lite_mode(script_path, script_args):
     click.secho(f"\n[Lite Debugger] Armed and ready!", fg="green", bold=True)
     click.echo(f"  Job ID:  {job_id}")
     click.echo(f"  PID:     {pid}")
+    if post_mortem:
+        click.echo(f"  Post-mortem debugging: ENABLED")
     click.echo(f"\nTo activate the debugger, run:")
     click.secho(f"  rdg attach {job_id}", fg="cyan", bold=True)
     click.echo()
@@ -117,7 +139,18 @@ def _run_lite_mode(script_path, script_args):
     sys.argv = [script_path] + list(script_args)
     sys.path.insert(0, os.path.dirname(script_path))
 
-    runpy.run_path(script_path, run_name="__main__")
+    if post_mortem:
+        try:
+            runpy.run_path(script_path, run_name="__main__")
+        except Exception:
+            print("\n[POST-MORTEM] Unhandled exception occurred! Starting debugger...", flush=True)
+            import traceback
+            traceback.print_exc()
+            # Start debugger and trigger breakpoint at crash point
+            _start_debugger_api(wait=False)
+            debugpy.breakpoint()
+    else:
+        runpy.run_path(script_path, run_name="__main__")
 
 
 @cli.command()

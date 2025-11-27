@@ -113,6 +113,33 @@ Use this method if you are already connected to a remote machine (like a login n
 
 ---
 
+## Post-Mortem Debugging
+
+When you want to debug crashes without the overhead of running with an active debugger, use **post-mortem mode**:
+
+```bash
+rdg debug --post-mortem python my_script.py --arg value
+```
+
+In post-mortem mode:
+- The script runs normally with zero debugger overhead
+- If an unhandled exception occurs, the debugger starts automatically
+- You can inspect the full call stack at the crash point
+- The traceback is printed before the debugger starts
+
+You can combine post-mortem with lite mode for maximum flexibility:
+
+```bash
+rdg debug --lite --post-mortem python my_script.py --arg value
+```
+
+This combination allows you to:
+- Run the script normally without any debugger overhead
+- Activate the debugger on-demand with `rdg attach` if needed
+- Automatically start the debugger if the script crashes
+
+---
+
 ## Lite Mode - On-Demand Debugging
 
 For long-running jobs where you don't want to pause execution immediately but want the option to debug later, use **lite mode**:
@@ -186,8 +213,14 @@ rdg.pause()  # Pause here when ready to debug
 |---|---|
 | `rdg debug python <script> [args...]` | Wraps a Python script to start a `debugpy` listener and waits for a client to attach. |
 | `rdg debug --lite python <script> [args...]` | Arms the debugger in lite mode - runs the script normally until you activate it with `rdg attach`. |
+| `rdg debug --post-mortem python <script> [args...]` | Runs the script normally and automatically starts the debugger if an unhandled exception occurs. |
 | `rdg attach [job_id] [pid]` | Activates a lite-mode debugger. Prompts interactively if arguments are omitted. |
 | `rdg init` | Creates or updates `.vscode/launch.json` with the required debugger configurations. |
+
+**Flags:**
+- `--lite` / `-l` - Enable lite mode (on-demand debugging via signal)
+- `--post-mortem` / `-pm` - Enable post-mortem debugging (start debugger on crash)
+- These flags can be combined: `rdg debug --lite --post-mortem python script.py`
 
 **Python API:**
 - `remote_debug.start_debugger(wait=True)` - Start debugger server and optionally wait for connection
