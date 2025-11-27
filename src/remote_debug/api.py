@@ -14,9 +14,27 @@ _debugger_started = False
 _debugger_port = None
 _debugger_host = None
 
+# Default port to try (unlikely to be in use)
+DEFAULT_DEBUG_PORT = 5679
+
+
+def _is_port_free(port):
+    """Check if a port is available."""
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.bind(("", port))
+            return True
+    except OSError:
+        return False
+
 
 def _find_free_port():
-    """Find an available port on the system."""
+    """Find an available port, preferring the default."""
+    # Try default port first
+    if _is_port_free(DEFAULT_DEBUG_PORT):
+        return DEFAULT_DEBUG_PORT
+
+    # Fall back to finding any free port
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.bind(("", 0))
         return s.getsockname()[1]

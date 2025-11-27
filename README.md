@@ -14,6 +14,7 @@ A CLI tool to simplify visual debugging of Python scripts on remote HPC clusters
   - [Method A: Connecting from your Local Machine](#method-a-connecting-from-your-local-machine)
   - [Method B: Connecting via VS Code Remote-SSH](#method-b-connecting-via-vs-code-remote-ssh)
 - [Lite Mode - On-Demand Debugging](#lite-mode---on-demand-debugging)
+- [Programmatic API](#programmatic-api)
 - [Command Reference](#command-reference)
 
 ---
@@ -161,6 +162,24 @@ For long-running jobs where you don't want to pause execution immediately but wa
 
 ---
 
+## Programmatic API
+
+For maximum control, trigger the debugger directly from your Python code:
+
+```python
+import remote_debug as rdg
+
+# Option 1: Start and wait immediately
+rdg.start_debugger()
+
+# Option 2: Start without waiting, pause later
+rdg.start_debugger(wait=False)
+# ... initialization code runs ...
+rdg.pause()  # Pause here when ready to debug
+```
+
+---
+
 ## Command Reference
 
 | Command | Description |
@@ -169,5 +188,9 @@ For long-running jobs where you don't want to pause execution immediately but wa
 | `rdg debug --lite python <script> [args...]` | Arms the debugger in lite mode - runs the script normally until you activate it with `rdg attach`. |
 | `rdg attach [job_id] [pid]` | Activates a lite-mode debugger. Prompts interactively if arguments are omitted. |
 | `rdg init` | Creates or updates `.vscode/launch.json` with the required debugger configurations. |
+
+**Python API:**
+- `remote_debug.start_debugger(wait=True)` - Start debugger server and optionally wait for connection
+- `remote_debug.pause()` - Pause execution and wait for debugger to attach
 
 ---

@@ -173,6 +173,12 @@ def init():
             "default": "5678",
         },
         {
+            "id": "remoteDebugPort",
+            "type": "promptString",
+            "description": "Enter the remote debugger port.",
+            "default": "5679",
+        },
+        {
             "id": "remoteWorkspaceFolder",
             "type": "promptString",
             "description": "Enter the absolute path to the project folder on the remote machine.",
