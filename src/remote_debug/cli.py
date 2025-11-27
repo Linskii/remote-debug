@@ -85,6 +85,9 @@ def debug(lite, post_mortem, command):
 
 def _run_normal_mode(script_path, script_args, post_mortem=False):
     """Run the script with debugger started immediately (original behavior)."""
+    import sys
+    import traceback
+
     # Set sys.argv to what the script would expect
     sys.argv = [script_path] + list(script_args)
     # Add the script's directory to the path to allow for relative imports
@@ -96,8 +99,6 @@ def _run_normal_mode(script_path, script_args, post_mortem=False):
             runpy.run_path(script_path, run_name="__main__")
         except Exception:
             click.echo("\n[POST-MORTEM] Unhandled exception occurred! Starting debugger...", err=True)
-            import traceback
-            import sys
 
             # Print the traceback
             traceback.print_exc()
@@ -128,6 +129,8 @@ def _run_normal_mode(script_path, script_args, post_mortem=False):
 def _run_lite_mode(script_path, script_args, post_mortem=False):
     """Run the script with signal-based debugger activation."""
     import signal
+    import sys
+    import traceback
 
     # Print initial message
     job_id = os.environ.get("SLURM_JOB_ID", "UNKNOWN")
@@ -162,8 +165,6 @@ def _run_lite_mode(script_path, script_args, post_mortem=False):
             runpy.run_path(script_path, run_name="__main__")
         except Exception:
             print("\n[POST-MORTEM] Unhandled exception occurred! Starting debugger...", flush=True)
-            import traceback
-            import sys
 
             # Print the traceback
             traceback.print_exc()
