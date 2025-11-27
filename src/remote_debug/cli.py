@@ -38,7 +38,7 @@ def cli():
 )
 @click.option(
     "--post-mortem",
-    "-pm",
+    "-p",
     is_flag=True,
     help="Automatically start debugger on unhandled exceptions.",
 )
@@ -98,9 +98,15 @@ def _run_normal_mode(script_path, script_args, post_mortem=False):
             click.echo("\n[POST-MORTEM] Unhandled exception occurred! Starting debugger...", err=True)
             import traceback
             traceback.print_exc()
-            # Start debugger and trigger breakpoint at crash point
+            # Start debugger server (don't wait yet, we need to set breakpoint here first)
             _start_debugger_api(wait=False)
+            # Set breakpoint at the exception handler so stack is available
             debugpy.breakpoint()
+            # Keep the process alive so you can debug or reconnect
+            click.echo("\n[POST-MORTEM] Debugger session active. Press Ctrl+C to exit when done.", err=True)
+            import time
+            while True:
+                time.sleep(1)
     else:
         # Normal mode: start debugger before running script
         _start_debugger_api(wait=True)
@@ -146,9 +152,15 @@ def _run_lite_mode(script_path, script_args, post_mortem=False):
             print("\n[POST-MORTEM] Unhandled exception occurred! Starting debugger...", flush=True)
             import traceback
             traceback.print_exc()
-            # Start debugger and trigger breakpoint at crash point
+            # Start debugger server (don't wait yet, we need to set breakpoint here first)
             _start_debugger_api(wait=False)
+            # Set breakpoint at the exception handler so stack is available
             debugpy.breakpoint()
+            # Keep the process alive so you can debug or reconnect
+            print("\n[POST-MORTEM] Debugger session active. Press Ctrl+C to exit when done.", flush=True)
+            import time
+            while True:
+                time.sleep(1)
     else:
         runpy.run_path(script_path, run_name="__main__")
 

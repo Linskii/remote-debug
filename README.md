@@ -219,8 +219,8 @@ rdg.pause()  # Pause here when ready to debug
 
 **Flags:**
 - `--lite` / `-l` - Enable lite mode (on-demand debugging via signal)
-- `--post-mortem` / `-pm` - Enable post-mortem debugging (start debugger on crash)
-- These flags can be combined: `rdg debug --lite --post-mortem python script.py`
+- `--post-mortem` / `-p` - Enable post-mortem debugging (start debugger on crash)
+- These flags can be combined: `rdg debug --lite --post-mortem python script.py` or `rdg debug -lp python script.py`
 
 **Python API:**
 - `remote_debug.start_debugger(wait=True)` - Start debugger server and optionally wait for connection
