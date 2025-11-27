@@ -97,11 +97,23 @@ def _run_normal_mode(script_path, script_args, post_mortem=False):
         except Exception:
             click.echo("\n[POST-MORTEM] Unhandled exception occurred! Starting debugger...", err=True)
             import traceback
+            import sys
+
+            # Print the traceback
             traceback.print_exc()
-            # Start debugger server (don't wait yet, we need to set breakpoint here first)
+
+            # Preserve exception info for post-mortem debugging
+            exc_info = sys.exc_info()
+
+            # Start debugger server
             _start_debugger_api(wait=False)
-            # Set breakpoint at the exception handler so stack is available
+
+            # Wait for client and break at this point (with exception info preserved)
+            click.echo("\n[POST-MORTEM] Waiting for debugger to attach...", err=True)
+            debugpy.wait_for_client()
+            click.echo("[POST-MORTEM] Debugger attached! Use the Call Stack panel to navigate frames.", err=True)
             debugpy.breakpoint()
+
             # Keep the process alive so you can debug or reconnect
             click.echo("\n[POST-MORTEM] Debugger session active. Press Ctrl+C to exit when done.", err=True)
             import time
@@ -151,11 +163,23 @@ def _run_lite_mode(script_path, script_args, post_mortem=False):
         except Exception:
             print("\n[POST-MORTEM] Unhandled exception occurred! Starting debugger...", flush=True)
             import traceback
+            import sys
+
+            # Print the traceback
             traceback.print_exc()
-            # Start debugger server (don't wait yet, we need to set breakpoint here first)
+
+            # Preserve exception info for post-mortem debugging
+            exc_info = sys.exc_info()
+
+            # Start debugger server
             _start_debugger_api(wait=False)
-            # Set breakpoint at the exception handler so stack is available
+
+            # Wait for client and break at this point (with exception info preserved)
+            print("\n[POST-MORTEM] Waiting for debugger to attach...", flush=True)
+            debugpy.wait_for_client()
+            print("[POST-MORTEM] Debugger attached! Use the Call Stack panel to navigate frames.", flush=True)
             debugpy.breakpoint()
+
             # Keep the process alive so you can debug or reconnect
             print("\n[POST-MORTEM] Debugger session active. Press Ctrl+C to exit when done.", flush=True)
             import time
