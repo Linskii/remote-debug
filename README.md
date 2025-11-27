@@ -13,6 +13,7 @@ A CLI tool to simplify visual debugging of Python scripts on remote HPC clusters
 - [Debugging Workflow](#debugging-workflow)
   - [Method A: Connecting from your Local Machine](#method-a-connecting-from-your-local-machine)
   - [Method B: Connecting via VS Code Remote-SSH](#method-b-connecting-via-vs-code-remote-ssh)
+- [Lite Mode - On-Demand Debugging](#lite-mode---on-demand-debugging)
 - [Command Reference](#command-reference)
 
 ---
@@ -111,12 +112,62 @@ Use this method if you are already connected to a remote machine (like a login n
 
 ---
 
+## Lite Mode - On-Demand Debugging
+
+For long-running jobs where you don't want to pause execution immediately but want the option to debug later, use **lite mode**:
+
+1.  **Start your job with lite mode**
+
+    ```bash
+    rdg debug --lite python my_script.py --arg value
+    ```
+
+    The script runs normally without pausing. The output shows the Job ID and PID:
+
+    ```text
+    [Lite Debugger] Armed and ready!
+      Job ID:  12345
+      PID:     67890
+
+    To activate the debugger, run:
+      rdg attach 12345
+    ```
+
+2.  **Activate the debugger when needed**
+
+    When you want to start debugging, run from the login node:
+
+    ```bash
+    rdg attach
+    ```
+
+    This will:
+    - Show an interactive menu to select your running job
+    - Prompt you for the PID from the job output
+    - Send a signal to activate the debugger
+
+    Alternatively, provide the Job ID and PID directly:
+
+    ```bash
+    rdg attach 12345 67890
+    ```
+
+3.  **Connect as usual**
+
+    Once activated, check the job output for connection details and follow the standard workflow above to attach VS Code.
+
+> [!TIP]
+> Lite mode is perfect for jobs that run for hours or days. The debugger stays dormant until you need it, avoiding any performance impact. You can disconnect and reconnect multiple times during the job's lifetime.
+
+---
+
 ## Command Reference
 
 | Command | Description |
 |---|---|
-| `rdg rebug python <script> [args...]` | Wraps a Python script to start a `debugpy` listener and waits for a client to attach. |
+| `rdg debug python <script> [args...]` | Wraps a Python script to start a `debugpy` listener and waits for a client to attach. |
+| `rdg debug --lite python <script> [args...]` | Arms the debugger in lite mode - runs the script normally until you activate it with `rdg attach`. |
+| `rdg attach [job_id] [pid]` | Activates a lite-mode debugger. Prompts interactively if arguments are omitted. |
 | `rdg init` | Creates or updates `.vscode/launch.json` with the required debugger configurations. |
-| `rdg tunnel <node> <port> <login> [--local-port <port>]` | Constructs the SSH command to establish a tunnel to the compute node. |
 
 ---
