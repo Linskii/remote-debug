@@ -11,6 +11,7 @@ import json
 import io
 import subprocess
 import questionary
+from .api import start_debugger as _start_debugger_api
 
 
 @click.group()
@@ -74,51 +75,8 @@ def debug(lite, command):
 
 def _run_normal_mode(script_path, script_args):
     """Run the script with debugger started immediately (original behavior)."""
-    # 1. Find an open port.
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.bind(("", 0))
-        port = s.getsockname()[1]
-
-    # 2. Get the current hostname.
-    hostname = socket.gethostname()
-    remote_path = os.getcwd()
-
-    # Print connection info for the user
-    console = Console(file=io.StringIO())
-    info_text = Text(justify="left")
-    info_text.append("Node:        ", style="bold")
-    info_text.append(hostname, style="cyan")
-    info_text.append("\nPort:        ", style="bold")
-    info_text.append(str(port), style="cyan")
-    info_text.append("\nRemote Path: ", style="bold")
-    info_text.append(remote_path, style="cyan")
-
-    panel = Panel(
-        info_text,
-        title="[bold yellow]Python Debugger Info[/bold yellow]",
-        border_style="blue",
-        expand=False,
-    )
-    console.print(panel)
-    output = console.file.getvalue()
-    click.echo(output)
-
-    # Also print the tunnel command for convenience
-    default_local_port = 5678
-    ssh_command = _construct_ssh_command(hostname, port, default_local_port)
-    click.echo(
-        "\nTo connect from a local VS Code instance, run this on your local machine:"
-    )
-    click.secho(ssh_command, fg="green")
-    click.echo(f"Then, attach the debugger to localhost:{default_local_port}.\n")
-
-    # Start listening for a connection.
-    debugpy.listen(("0.0.0.0", port))
-
-    click.echo("Script is paused, waiting for debugger to attach...")
-    # This line blocks execution until you attach from VS Code.
-    debugpy.wait_for_client()
-    click.echo("Debugger attached! Resuming script.")
+    # Start the debugger and wait for connection
+    _start_debugger_api(wait=True)
 
     # Execute the target script
     # Set sys.argv to what the script would expect
@@ -145,69 +103,12 @@ def _run_lite_mode(script_path, script_args):
 
     def _activate_debugger(signum, frame):
         """Signal handler that activates the debugger."""
-        import socket
-        import debugpy
-        from rich.panel import Panel
-        from rich.text import Text
-        from rich.console import Console
-        import io
-
         print(
             f"\n[DEBUGGER] Signal {signum} received! Waking up debugger...",
             flush=True,
         )
-
-        # 1. Find an open port
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.bind(("", 0))
-            port = s.getsockname()[1]
-
-        # 2. Get the current hostname
-        hostname = socket.gethostname()
-        remote_path = os.getcwd()
-
-        # Print connection info for the user
-        console = Console(file=io.StringIO())
-        info_text = Text(justify="left")
-        info_text.append("Node:        ", style="bold")
-        info_text.append(hostname, style="cyan")
-        info_text.append("\nPort:        ", style="bold")
-        info_text.append(str(port), style="cyan")
-        info_text.append("\nRemote Path: ", style="bold")
-        info_text.append(remote_path, style="cyan")
-
-        panel = Panel(
-            info_text,
-            title="[bold yellow]Python Debugger Info[/bold yellow]",
-            border_style="blue",
-            expand=False,
-        )
-        console.print(panel)
-        output = console.file.getvalue()
-        print(output, flush=True)
-
-        # Start listening
-        debugpy.listen(("0.0.0.0", port))
-        print(f"[DEBUGGER] Listening on 0.0.0.0:{port}", flush=True)
-
-        # Print SSH tunnel command
-        default_local_port = 5678
-        ssh_command = _construct_ssh_command(hostname, port, default_local_port)
-        print(
-            "\nTo connect from a local VS Code instance, run this on your local machine:",
-            flush=True,
-        )
-        print(f"\033[92m{ssh_command}\033[0m", flush=True)  # Green color
-        print(
-            f"Then, attach the debugger to localhost:{default_local_port}.\n",
-            flush=True,
-        )
-
-        print(f"[DEBUGGER] Pausing execution. Attach your VS Code now!", flush=True)
-
-        # Wait for client and break
-        debugpy.wait_for_client()
-        debugpy.breakpoint()
+        # Use the shared API to start the debugger
+        _start_debugger_api(wait=True)
 
     # Register the signal handler
     signal.signal(signal.SIGUSR1, _activate_debugger)
