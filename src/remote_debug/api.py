@@ -130,7 +130,7 @@ def start_debugger(wait=True):
     print(f"[DEBUGGER] Listening on 0.0.0.0:{port}", flush=True)
 
     # Print SSH tunnel command
-    default_local_port = 5678
+    default_local_port = 5679
     ssh_command = _get_ssh_command(hostname, port, default_local_port)
     print(
         "\nTo connect from a local VS Code instance, run this on your local machine:",
